@@ -84,7 +84,9 @@ const ChatPage: React.FC = () => {
 
       if (Array.isArray(data.steps)) {
         aiText = data.steps
-          .map((q: Map<string , string>, i: number) => `${q.description}`)
+          .map((step: { description?: string; title?: string }, i: number) =>
+            step.description ? `${i + 1}. ${step.description}` : ""
+          )
           .join("\n\n");
       }
       // 🔹 أو إذا كانت مجرد نص عادي
