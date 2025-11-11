@@ -6,9 +6,6 @@ import InputForm from "../components/InputForm";
 import TypingIndicator from "../components/TypingIndicator";
 import { Message } from "../types/chat";
 
-const N8N_WEBHOOK_URL =
-  "https://kyzendev.app.n8n.cloud/webhook/c9501d26-a9e9-4151-aad3-9e031433ed46";
-
 const ChatPage: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -21,23 +18,18 @@ const ChatPage: React.FC = () => {
   const generateRandomId = () =>
     Math.floor(100000 + Math.random() * 900000).toString();
 
-  const sendMessage = async (
-    url: string,
-    description: string
-  ): Promise<void> => {
+  const sendMessage = async (url: string, description: string): Promise<void> => {
     if (!url.trim() && !description.trim()) return;
 
     setIsLoading(true);
 
-    // إذا أُدخل URL نحفظه في localStorage
+    // حفظ الرابط محلياً
     if (url.trim()) {
       localStorage.setItem("url", url.trim());
     }
 
-    // نحصل على URL من localStorage إن لم يُدخل المستخدم واحدًا جديدًا
     const finalUrl = url.trim() || localStorage.getItem("url") || "";
 
-    // رسالة المستخدم المعروضة
     const userText = finalUrl
       ? `🔗 الرابط:\n${finalUrl}\n\n📝 الوصف:\n${description || "—"}`
       : description;
@@ -53,8 +45,8 @@ const ChatPage: React.FC = () => {
         localStorage.setItem("url", url);
       }
 
-      // 🔹 الإرسال إلى n8n
-      const response = await fetch(N8N_WEBHOOK_URL, {
+      // 🔹 إرسال الطلب إلى API المحلي (يتولى التواصل مع n8n)
+      const response = await fetch("/api/proxy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -66,32 +58,38 @@ const ChatPage: React.FC = () => {
 
       if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
 
-      const data = await response.json();
+      const json = await response.json();
+      let data: any;
+
+      // في حال أن الـ proxy أرجع النص فقط
+      try {
+        data = JSON.parse(json.result);
+      } catch {
+        data = json;
+      }
+
       console.log("📩 Response from n8n:", data);
 
       let aiText = "عذرًا، لم أتلق ردًا واضحًا من الذكاء الاصطناعي.";
 
-      // 🔹 إذا كانت الأسئلة مصفوفة، نحولها إلى نص منسق
+      // 🔹 معالجة نوع البيانات القادمة من n8n
       if (Array.isArray(data.questions)) {
-        aiText = data.questions
-          .map((q: string, i: number) => `${q}`)
-          .join("\n\n");
-      }
-      // 🔹 أو إذا كانت مجرد نص عادي
-      else if (typeof data.questions === "string") {
+        aiText = data.questions.map((q: string) => `${q}`).join("\n\n");
+      } else if (typeof data.questions === "string") {
         aiText = data.questions;
       }
 
+      // 🔹 معالجة الخطوات steps بعرض منسق (العنوان + الوصف)
       if (Array.isArray(data.steps)) {
         aiText = data.steps
-          .map((step: { description?: string; title?: string }, i: number) =>
-            step.description ? `${i + 1}. ${step.description}` : ""
+          .map(
+            (step: { title?: string; description?: string }, i: number) => {
+              const title = step.title ? `📘 ${step.title}\n` : "";
+              const desc = step.description ? `${step.description}` : "";
+              return `${i + 1}. ${title}${desc}`;
+            }
           )
           .join("\n\n");
-      }
-      // 🔹 أو إذا كانت مجرد نص عادي
-      else if (typeof data.questions === "string") {
-        aiText = data.questions;
       }
 
       setMessages((prev) => [...prev, { text: aiText, sender: "ai" }]);
