@@ -23,7 +23,7 @@ const ChatPage: React.FC = () => {
 
     setIsLoading(true);
 
-    // حفظ الرابط محلياً
+    // Save the URL locally
     if (url.trim()) {
       localStorage.setItem("url", url.trim());
     }
@@ -31,13 +31,29 @@ const ChatPage: React.FC = () => {
     const finalUrl = url.trim() || localStorage.getItem("url") || "";
 
     const userText = finalUrl
-      ? `🔗 الرابط:\n${finalUrl}\n\n📝 الوصف:\n${description || "—"}`
+      ? `🔗 URL:\n${finalUrl}\n\n📝 Description:\n${description || "—"}`
       : description;
 
     setMessages((prev) => [...prev, { text: userText, sender: "user" }]);
 
+    const makeRequest = async () => {
+      // Send request to local API (which proxies to n8n)
+      const response = await fetch("/api/proxy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          url: finalUrl,
+          description,
+          sessionId: localStorage.getItem("sessionId"),
+        }),
+      });
+
+      if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
+      return response.json();
+    };
+
     try {
-      // sessionId ثابت خلال الجلسة
+      // Keep the same sessionId for the current session
       let sessionId = localStorage.getItem("sessionId");
       if (url) {
         sessionId = generateRandomId();
@@ -45,23 +61,15 @@ const ChatPage: React.FC = () => {
         localStorage.setItem("url", url);
       }
 
-      // 🔹 إرسال الطلب إلى API المحلي (يتولى التواصل مع n8n)
-      const response = await fetch("/api/proxy", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          url: finalUrl,
-          description,
-          sessionId,
-        }),
-      });
+      let json;
+      try {
+        json = await makeRequest();
+      } catch (firstError) {
+        console.warn("⚠️ First request failed, retrying once...");
+        json = await makeRequest(); // 🔁 retry once automatically
+      }
 
-      if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
-
-      const json = await response.json();
       let data: any;
-
-      // في حال أن الـ proxy أرجع النص فقط
       try {
         data = JSON.parse(json.result);
       } catch {
@@ -70,20 +78,20 @@ const ChatPage: React.FC = () => {
 
       console.log("📩 Response from n8n:", data);
 
-      let aiText = "عذرًا، لم أتلق ردًا واضحًا من الذكاء الاصطناعي.";
+      let aiText = "Sorry, I didn’t receive a clear response from the AI.";
 
-      // 🔹 معالجة نوع البيانات القادمة من n8n
+      // Handle data returned from n8n
       if (Array.isArray(data.questions)) {
         aiText = data.questions.map((q: string) => `${q}`).join("\n\n");
       } else if (typeof data.questions === "string") {
         aiText = data.questions;
       }
 
-      if(typeof data.raw === "string"){
+      if (typeof data.raw === "string") {
         aiText = data.raw;
       }
 
-      // 🔹 معالجة الخطوات steps بعرض منسق (العنوان + الوصف)
+      // Format steps with title + description
       if (Array.isArray(data.steps)) {
         aiText = data.steps
           .map(
@@ -98,10 +106,15 @@ const ChatPage: React.FC = () => {
 
       setMessages((prev) => [...prev, { text: aiText, sender: "ai" }]);
     } catch (err) {
-      console.error("N8N Error:", err);
+      
+      console.error("❌ N8N Error:", err);
       setMessages((prev) => [
         ...prev,
-        { text: "⚠️ حدث خطأ أثناء الاتصال بـ n8n.", sender: "ai" },
+        {
+          text:
+            "⚠️ An error occurred while connecting to n8n, and retrying also failed.",
+          sender: "ai",
+        },
       ]);
     } finally {
       setIsLoading(false);
@@ -112,14 +125,14 @@ const ChatPage: React.FC = () => {
     <div className="flex flex-col h-screen bg-gray-100">
       <header className="p-4 bg-white shadow-md border-b">
         <h1 className="text-xl font-bold text-center text-blue-600">
-          🤖 شات الذكاء الاصطناعي و n8n
+          🤖 AI Chat with n8n
         </h1>
       </header>
 
       <div className="flex-grow overflow-y-auto p-4 space-y-4">
         {messages.length === 0 && (
           <div className="text-center text-gray-500 mt-20">
-            ابدأ بإرسال وصف أو رابط!
+            Start by sending a description or a link!
           </div>
         )}
 

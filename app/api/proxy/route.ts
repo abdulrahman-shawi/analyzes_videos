@@ -4,10 +4,11 @@ export async function POST(req: Request) {
   try {
     const data = await req.json();
 
-    // إعداد مهلة 5 دقائق (300 ثانية)
+    // Set a 5-minute timeout (300 seconds)
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 300000);
 
+    // Forward the request to the n8n webhook
     const response = await fetch(
       "https://kyzendev.app.n8n.cloud/webhook/c9501d26-a9e9-4151-aad3-9e031433ed46",
       {
@@ -22,7 +23,7 @@ export async function POST(req: Request) {
 
     const resultText = await response.text();
 
-    // 🔹 نعيد الاستجابة مع تفعيل CORS
+    // 🔹 Return the response with CORS enabled
     return new NextResponse(resultText, {
       status: response.status,
       headers: {
@@ -38,8 +39,8 @@ export async function POST(req: Request) {
     const status = error.name === "AbortError" ? 504 : 500;
     const message =
       error.name === "AbortError"
-        ? "⏱️ انتهى الوقت دون استجابة من n8n (Timeout)"
-        : "❌ فشل الاتصال بـ n8n.";
+        ? "⏱️ Request to n8n timed out."
+        : "❌ Failed to connect to n8n.";
 
     return new NextResponse(JSON.stringify({ error: message }), {
       status,
@@ -52,7 +53,7 @@ export async function POST(req: Request) {
   }
 }
 
-// ✅ ضروري لدعم طلب preflight من المتصفح (CORS OPTIONS)
+// ✅ Required to handle browser preflight requests (CORS OPTIONS)
 export async function OPTIONS() {
   return new NextResponse(null, {
     status: 204,

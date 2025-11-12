@@ -2,7 +2,7 @@
 'use client'
 import React, { useState } from 'react';
 
-// تعريف Prop Types لدالة الإرسال
+// Define Prop Types for the submit function
 interface InputFormProps {
   sendMessage: (url: string, description: string) => Promise<void>;
   isLoading: boolean;
@@ -14,14 +14,14 @@ const InputForm: React.FC<InputFormProps> = ({ sendMessage, isLoading }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // التحقق من حالة التحميل أو عدم وجود أي إدخال
-    if (isLoading || (!description.trim())) return; 
-    
-    // إرسال البيانات
+    // Prevent submission if loading or no input provided
+    if (isLoading || (!description.trim())) return;
+
+    // Send the data
     sendMessage(url.trim(), description.trim());
-    
-    // مسح الحقول بعد الإرسال
-    setUrl(''); 
+
+    // Clear input fields after submission
+    setUrl('');
     setDescription('');
   };
 
@@ -31,14 +31,14 @@ const InputForm: React.FC<InputFormProps> = ({ sendMessage, isLoading }) => {
         type="url"
         value={url}
         onChange={(e) => setUrl(e.target.value)}
-        placeholder="أدخل الرابط هنا (اختياري)"
+        placeholder="Enter URL here (optional)"
         className="p-2 border rounded-lg focus:outline-none text-gray-500 focus:ring-2 focus:ring-blue-500"
         disabled={isLoading}
       />
       <textarea
         value={description}
         onChange={(e) => setDescription(e.target.value)}
-        placeholder="أدخل الوصف/السؤال هنا (إلزامي)"
+        placeholder="Enter description/question here (required)"
         rows={3}
         className="p-2 border rounded-lg focus:outline-none focus:ring-2 text-gray-500 focus:ring-blue-500 resize-none"
         disabled={isLoading}
@@ -51,7 +51,7 @@ const InputForm: React.FC<InputFormProps> = ({ sendMessage, isLoading }) => {
         }
         disabled={isLoading}
       >
-        {isLoading ? 'جاري التحميل...' : 'إرسال'}
+        {isLoading ? 'Loading...' : 'Submit'}
       </button>
     </form>
   );
