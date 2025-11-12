@@ -79,6 +79,10 @@ const ChatPage: React.FC = () => {
         aiText = data.questions;
       }
 
+      if(typeof data.raw === "string"){
+        aiText = data.raw;
+      }
+
       // 🔹 معالجة الخطوات steps بعرض منسق (العنوان + الوصف)
       if (Array.isArray(data.steps)) {
         aiText = data.steps
