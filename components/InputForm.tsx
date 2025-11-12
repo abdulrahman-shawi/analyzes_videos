@@ -32,7 +32,7 @@ const InputForm: React.FC<InputFormProps> = ({ sendMessage, isLoading }) => {
         value={url}
         onChange={(e) => setUrl(e.target.value)}
         placeholder="أدخل الرابط هنا (اختياري)"
-        className="p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="p-2 border rounded-lg focus:outline-none text-gray-500 focus:ring-2 focus:ring-blue-500"
         disabled={isLoading}
       />
       <textarea
@@ -40,7 +40,7 @@ const InputForm: React.FC<InputFormProps> = ({ sendMessage, isLoading }) => {
         onChange={(e) => setDescription(e.target.value)}
         placeholder="أدخل الوصف/السؤال هنا (إلزامي)"
         rows={3}
-        className="p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+        className="p-2 border rounded-lg focus:outline-none focus:ring-2 text-gray-500 focus:ring-blue-500 resize-none"
         disabled={isLoading}
         required
       />
