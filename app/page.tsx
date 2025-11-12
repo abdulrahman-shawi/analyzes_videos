@@ -88,7 +88,7 @@ const ChatPage: React.FC = () => {
       }
 
       if (typeof data.raw === "string") {
-        aiText = data.raw;
+        aiText = data.output;
       }
 
       // Format steps with title + description
