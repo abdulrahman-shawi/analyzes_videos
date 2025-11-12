@@ -4,7 +4,7 @@ export async function POST(req: Request) {
   try {
     const data = await req.json();
 
-    // 🔹 إعداد المهلة الزمنية (هنا 60 ثانية)
+    // إعداد مهلة 5 دقائق (300 ثانية)
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 300000);
 
@@ -20,21 +20,46 @@ export async function POST(req: Request) {
 
     clearTimeout(timeout);
 
-    const result = await response.text();
-    return NextResponse.json({ result });
+    const resultText = await response.text();
+
+    // 🔹 نعيد الاستجابة مع تفعيل CORS
+    return new NextResponse(resultText, {
+      status: response.status,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+      },
+    });
   } catch (error: any) {
     console.error("Proxy error:", error.name, error.message);
 
-    if (error.name === "AbortError") {
-      return NextResponse.json(
-        { error: "⏱️ انتهى الوقت دون استجابة من n8n (Timeout)" },
-        { status: 504 }
-      );
-    }
+    const status = error.name === "AbortError" ? 504 : 500;
+    const message =
+      error.name === "AbortError"
+        ? "⏱️ انتهى الوقت دون استجابة من n8n (Timeout)"
+        : "❌ فشل الاتصال بـ n8n.";
 
-    return NextResponse.json(
-      { error: "❌ فشل الاتصال بـ n8n." },
-      { status: 500 }
-    );
+    return new NextResponse(JSON.stringify({ error: message }), {
+      status,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+      },
+    });
   }
+}
+
+// ✅ ضروري لدعم طلب preflight من المتصفح (CORS OPTIONS)
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+    },
+  });
 }
