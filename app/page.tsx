@@ -18,7 +18,10 @@ const ChatPage: React.FC = () => {
   const generateRandomId = () =>
     Math.floor(100000 + Math.random() * 900000).toString();
 
-  const sendMessage = async (url: string, description: string): Promise<void> => {
+  const sendMessage = async (
+    url: string,
+    description: string
+  ): Promise<void> => {
     if (!url.trim() && !description.trim()) return;
 
     setIsLoading(true);
@@ -96,14 +99,13 @@ const ChatPage: React.FC = () => {
       }
 
       // Format steps with title + description
-      if (Array.isArray(data.plan.steps)) {
+      if (Array.isArray(data.plan?.steps)) {
         aiText = data.plan.steps
           .map(
             (step: { task_name?: string; description?: string }, i: number) => {
-              const title = step.task_name ? `
-              📘 ${step.task_name}\n\n
-              ${step.description}
-              ` : "";
+              const title = step.task_name
+                ? `📘 ${step.task_name}\n\n${step.description}`
+                : "";
               const desc = step.description ? `${step.description}` : "";
               return `${i + 1}. ${title}${desc}`;
             }
@@ -113,13 +115,11 @@ const ChatPage: React.FC = () => {
 
       setMessages((prev) => [...prev, { text: aiText, sender: "ai" }]);
     } catch (err) {
-      
       console.error("❌ N8N Error:", err);
       setMessages((prev) => [
         ...prev,
         {
-          text:
-            "⚠️ An error occurred while connecting to n8n, and retrying also failed.",
+          text: "⚠️ An error occurred while connecting to n8n, and retrying also failed.",
           sender: "ai",
         },
       ]);
