@@ -88,6 +88,10 @@ const ChatPage: React.FC = () => {
       }
 
       if (typeof data.raw === "string") {
+        aiText = data.raw;
+      }
+
+      if (typeof data.output === "string") {
         aiText = data.output;
       }
 
