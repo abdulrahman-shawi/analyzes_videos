@@ -97,7 +97,7 @@ const ChatPage: React.FC = () => {
 
       // Format steps with title + description
       if (Array.isArray(data.steps)) {
-        aiText = data.steps
+        aiText = data.stepss
           .map(
             (step: { title?: string; description?: string }, i: number) => {
               const title = step.title ? `📘 ${step.title}\n` : "";
