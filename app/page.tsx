@@ -40,7 +40,6 @@ const ChatPage: React.FC = () => {
     setMessages((prev) => [...prev, { text: userText, sender: "user" }]);
 
     const makeRequest = async () => {
-      // Send request to local API (which proxies to n8n)
       const response = await fetch("/api/proxy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -56,7 +55,6 @@ const ChatPage: React.FC = () => {
     };
 
     try {
-      // Keep the same sessionId for the current session
       let sessionId = localStorage.getItem("sessionId");
       if (url) {
         sessionId = generateRandomId();
@@ -69,7 +67,7 @@ const ChatPage: React.FC = () => {
         json = await makeRequest();
       } catch (firstError) {
         console.warn("⚠️ First request failed, retrying once...");
-        json = await makeRequest(); // 🔁 retry once automatically
+        json = await makeRequest();
       }
 
       let data: any;
@@ -81,39 +79,52 @@ const ChatPage: React.FC = () => {
 
       console.log("📩 Response from n8n:", data);
 
-      let aiText = "Sorry, I didn’t receive a clear response from the AI.";
+      // 🧠 Combine AI message, questions, and steps properly
+      let aiText = "";
 
-      // Handle data returned from n8n
+      // 💬 Step 1: AI main message
+      if (typeof data.ai_message === "string") {
+        aiText += `💬 ${data.ai_message}\n\n`;
+      }
+
+      // ❓ Step 2: Questions (if any)
       if (Array.isArray(data.questions)) {
-        aiText = data.questions.map((q: string) => `${q}`).join("\n\n");
+        aiText += data.questions.map((q: string) => `❓ ${q}`).join("\n\n");
       } else if (typeof data.questions === "string") {
-        aiText = data.questions;
+        aiText += `❓ ${data.questions}\n\n`;
       }
 
-      if (typeof data.raw === "string") {
-        aiText = data.raw;
-      }
-
+      // 🧾 Step 3: Generic outputs
       if (typeof data.output === "string") {
-        aiText = data.output;
+        aiText += `${data.output}\n\n`;
+      }
+      if (typeof data.raw === "string") {
+        aiText += `${data.raw}\n\n`;
       }
 
-      // Format steps with title + description
-      if (Array.isArray(data.plan?.steps)) {
-        aiText = data.plan.steps
+      // 🧩 Step 4: Plan steps (main focus)
+      if (Array.isArray(data.plan?.steps) && data.plan.steps.length > 0) {
+        const stepsText = data.plan.steps
           .map(
             (step: { task_name?: string; description?: string }, i: number) => {
               const title = step.task_name
-                ? `📘 ${step.task_name}\n\n${step.description}`
-                : "";
-              const desc = step.description ? `${step.description}` : "";
+                ? `📘 **${step.task_name}**`
+                : `📍 Step ${i + 1}`;
+              const desc = step.description ? `\n${step.description}` : "";
               return `${i + 1}. ${title}${desc}`;
             }
           )
           .join("\n\n");
+
+        aiText += `\n🧩 **Detailed Plan:**\n\n${stepsText}`;
       }
 
-      setMessages((prev) => [...prev, { text: aiText, sender: "ai" }]);
+      // Fallback if AI text is empty
+      if (!aiText.trim()) {
+        aiText = "⚠️ No clear response or steps were provided by the AI.";
+      }
+
+      setMessages((prev) => [...prev, { text: aiText.trim(), sender: "ai" }]);
     } catch (err) {
       console.error("❌ N8N Error:", err);
       setMessages((prev) => [
