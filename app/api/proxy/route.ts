@@ -10,7 +10,7 @@ export async function POST(req: Request) {
 
     // Forward the request to the n8n webhook
     const response = await fetch(
-      "https://kyzendev.app.n8n.cloud/webhook-test/c9501d26-a9e9-4151-aad3-9e031433ed46",
+      "https://kyzendev.app.n8n.cloud/webhook/c9501d26-a9e9-4151-aad3-9e031433ed46",
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
