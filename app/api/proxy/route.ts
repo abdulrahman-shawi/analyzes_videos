@@ -21,7 +21,7 @@ export async function POST(req: Request) {
 
     clearTimeout(timeout);
 
-    const resultText = await response.text();
+    const resultText = await response.json();
 
     // 🔹 Return the response with CORS enabled
     return new NextResponse(resultText, {
