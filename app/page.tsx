@@ -23,10 +23,8 @@ const ChatPage: React.FC = () => {
 
     setIsLoading(true);
 
-    // Save the URL locally
-    if (url.trim()) {
-      localStorage.setItem("url", url.trim());
-    }
+    // Save the URL locally for memory
+    if (url.trim()) localStorage.setItem("url", url.trim());
 
     const finalUrl = url.trim() || localStorage.getItem("url") || "";
 
@@ -37,7 +35,6 @@ const ChatPage: React.FC = () => {
     setMessages((prev) => [...prev, { text: userText, sender: "user" }]);
 
     const makeRequest = async () => {
-      // Send request to local API (which proxies to n8n)
       const response = await fetch("/api/proxy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -53,7 +50,7 @@ const ChatPage: React.FC = () => {
     };
 
     try {
-      // Keep the same sessionId for the current session
+      // Keep or generate sessionId
       let sessionId = localStorage.getItem("sessionId");
       if (url) {
         sessionId = generateRandomId();
@@ -66,55 +63,48 @@ const ChatPage: React.FC = () => {
         json = await makeRequest();
       } catch (firstError) {
         console.warn("⚠️ First request failed, retrying once...");
-        json = await makeRequest(); // 🔁 retry once automatically
+        json = await makeRequest();
       }
 
-      let data: any;
-      try {
-        data = JSON.parse(json.result);
-      } catch {
-        data = json;
+      // Extract n8n output safely
+      console.log("📩 Response from n8n:", json);
+
+      let aiText = "⚠️ No clear response received from the AI.";
+
+      // ✅ Handle case: { output: "..." }
+      if (json.output && typeof json.output === "string") {
+        aiText = json.output;
       }
 
-      console.log("📩 Response from n8n:", data);
-
-      let aiText = "Sorry, I didn’t receive a clear response from the AI.";
-
-      // Handle data returned from n8n
-      if (Array.isArray(data.questions)) {
-        aiText = data.questions.map((q: string) => `${q}`).join("\n\n");
-      } else if (typeof data.questions === "string") {
-        aiText = data.questions;
+      // ✅ Handle case: { result: '{"output":"..."}' }
+      else if (json.result) {
+        try {
+          const parsed = JSON.parse(json.result);
+          if (parsed.output) aiText = parsed.output;
+        } catch {
+          aiText = json.result;
+        }
       }
 
-      if (typeof data.raw === "string") {
-        aiText = data.raw;
-      }
-
-      
-
-      // Format steps with title + description
-      if (Array.isArray(data.steps)) {
-        aiText = data.steps
+      // ✅ Handle alternate structures (questions, steps)
+      else if (Array.isArray(json.questions)) {
+        aiText = json.questions.map((q: string) => `• ${q}`).join("\n\n");
+      } else if (Array.isArray(json.steps)) {
+        aiText = json.steps
           .map(
-            (step: { title?: string; description?: string }, i: number) => {
-              const title = step.title ? `📘 ${step.title}\n` : "";
-              const desc = step.description ? `${step.description}` : "";
-              return `${i + 1}. ${title}${desc}`;
-            }
+            (step: { title?: string; description?: string }, i: number) =>
+              `${i + 1}. ${step.title || ""}\n${step.description || ""}`
           )
           .join("\n\n");
       }
 
       setMessages((prev) => [...prev, { text: aiText, sender: "ai" }]);
     } catch (err) {
-      
       console.error("❌ N8N Error:", err);
       setMessages((prev) => [
         ...prev,
         {
-          text:
-            "⚠️ An error occurred while connecting to n8n, and retrying also failed.",
+          text: "⚠️ Error connecting to n8n. Retrying failed.",
           sender: "ai",
         },
       ]);
