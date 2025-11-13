@@ -96,8 +96,8 @@ const ChatPage: React.FC = () => {
       }
 
       // Format steps with title + description
-      if (Array.isArray(data.plane.steps)) {
-        aiText = data.plane.steps
+      if (Array.isArray(data.plan.steps)) {
+        aiText = data.plan.steps
           .map(
             (step: { task_name?: string; description?: string }, i: number) => {
               const title = step.task_name ? `
